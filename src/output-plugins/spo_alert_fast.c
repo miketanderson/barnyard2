@@ -206,7 +206,7 @@ static void AlertFast(Packet *p, void *event, uint32_t event_type, void *arg)
 
         if (BcUseXFF()) {
             xff_in_addr.s_addr=((Unified2IDSEvent *)event)->ip_source;
-            if (xff_in_addr.s!=GET_SRC_ADDR(p).s_addr){
+            if (xff_in_addr.s_addr!=GET_SRC_ADDR(p).s_addr){
                 TextLog_Puts(data->log, " [XFF: ");
                 xff_in_addr.s_addr=(long)((Unified2IDSEvent *)event)->ip_source;
                 TextLog_Puts(data->log, inet_ntoa(xff_in_addr));
