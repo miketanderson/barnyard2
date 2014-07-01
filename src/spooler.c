@@ -835,6 +835,59 @@ void spoolerProcessRecord(Spooler *spooler, int fire_output)
     }
     else if (type == UNIFIED2_EXTRA_DATA)
     {
+        /* Used by XFF patch */
+        /* use only if -j was specified as a command line param */
+        if (BcUseXFF())
+        {
+            DEBUG_WRAP(DebugMessage(DEBUG_SPOOLER,"XFF: Extra Data Header found\n"););
+
+            /* Get Extra Data Headers Event Type (has to be 4) */
+            uint32_t event_type = ntohl((Unified2ExtraDataHdr *)spooler->record.data)->event_type);
+
+            if (event_type==4) 
+            {
+                DEBUG_WRAP(DebugMessage(DEBUG_SPOOLER,"XFF: Data Header is type 4 (ok)\n"););
+                /* Get pointed to Extra Data Record */
+                Unified2ExtraData * extradataptr=((Unified2ExtraData *) (((unsigned char *)(spooler->record.data))+sizeof(Unified2ExtraDataHdr)));
+
+                /* Get Extra Data Record Event ID */
+                uint32_t event_id=ntohl(extradataptr->event_id);
+                /* Get Extra Data Record Type */
+                uint32_t info_type = ntohl(extradataptr->type);
+                uint32_t data_type=ntohl(extradataptr->data_type);
+                uint32_t blob_length=ntohl(extradataptr->blob_length);
+
+                DEBUG_WRAP(DebugMessage(DEBUG_SPOOLER,"Event ID %u %u %u (blob_length: %u\n",event_id, info_type, data_type, blob_length););
+                /* Process only if info_type and data_type are 1's (are there other cases?) */
+                /* Also checks if blob_length == 12 (data_type 4 + blob_length 4 + IP Address 4) */
+                if (info_type==1 && data_type==1 && blob_length==12)
+                {
+                    DEBUG_WRAP(DebugMessage(DEBUG_SPOOLER,"XFF: Extra Data is info and data type 1, data size is 12 (ok)\n"););
+                    /* Get the XFF Ip address */
+                    uint32_t xff_ip=ntohl(*(uint32_t *)(++extradataptr));
+
+                    /* Transcriber note: not sure why the last 2 octets aren't formatted like the first two in this next line */
+                    DEBUG_WRAP(DebugMessage(DEBUG_SPOOLER,"XFF IP: %i.%i.%i.%i\n",(xff_ip >> 24) & 0xFF,(xff_ip >> 16) & 0xFF,(xff_ip >> 8) & 0xFF,xff_ip * 0xFF););
+
+                    /* check if there is a previously cached event that matches this event id */
+                    ernCache = spoolerEventCacheGetByEventID(spooler, event_id);
+
+                    if (ernCache != NULL)
+                    {
+                        /* Process it ONLY if the cached entry is type 7 - IDS EVENT */
+                        if (ernCache->type==UNIFIED2_IDS_EVENT)
+                        {
+                            DEBUG_WRAP(DebugMessage(DEBUG_SPOOLER,"XFF: Found a cached IDS_EVENT with the same ID\n"););
+                            Unified2IDSEvent * eventptr=((Unified2IDSEvent *)ernCache->data);
+                            uint32_t i=ntohl(eventptr->ip_source);
+                            DEBUG_WRAP(DebugMessage(DEBUG_SPOOLER,"SRC IP (cached): %i.%i.%i.%i\n",(i >> 24) & 0xFF,(i >> 16) & 0xFF,(i >> 8) & 0xFF,i * 0xFF););
+                            eventptr->ip_source=hton1(xff_ip);
+                        }
+                    }
+                }
+            }
+        }
+
         /* waldo operations occur after the output plugins are called */
         if (fire_output)
             spoolerWriteWaldo(&barnyard2_conf->waldo, spooler);

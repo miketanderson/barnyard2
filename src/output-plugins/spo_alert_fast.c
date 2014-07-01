@@ -150,6 +150,7 @@ static void AlertFast(Packet *p, void *event, uint32_t event_type, void *arg)
 {
     SpoAlertFastData    *data;
     SigNode             *sn;
+    struct in_addr xff_in_addr;
 
     if( p == NULL || event == NULL || arg == NULL )
     {
@@ -202,6 +203,16 @@ static void AlertFast(Packet *p, void *event, uint32_t event_type, void *arg)
                         0);
 
         TextLog_Print(data->log, "{%s} ", protocol_names[GET_IPH_PROTO(p)]);
+
+        if (BcUseXFF()) {
+            xff_in_addr.s_addr=((Unified2IDSEvent *)event)->ip_source;
+            if (xff_in_addr.s!=GET_SRC_ADDR(p).s_addr){
+                TextLog_Puts(data->log, " [XFF: ");
+                xff_in_addr.s_addr=(long)((Unified2IDSEvent *)event)->ip_source;
+                TextLog_Puts(data->log, inet_ntoa(xff_in_addr));
+                TextLog_Puts(data->log, "] ");
+            }
+        }
 
         if(p->frag_flag)
         {

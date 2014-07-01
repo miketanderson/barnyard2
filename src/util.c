@@ -146,6 +146,8 @@ int DisplayBanner(void)
         " / ,,_  \\  Version %s.%s.%s (Build %s)%s%s\n"
         " |o\"  )~|  By Ian Firns (SecurixLive): http://www.securixlive.com/\n"
 		" + '''' +  (C) Copyright 2008-2013 Ian Firns <firnsy@securixlive.com>\n"
+    "            XFF patch by I. Sanchez\n"
+    "            XFF patch update by M. Anderson\n"
         "\n"
         , VER_MAJOR, VER_MINOR, VER_REVISION, VER_BUILD,
 #ifdef DEBUG

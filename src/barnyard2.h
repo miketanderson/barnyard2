@@ -64,6 +64,7 @@
 #define VER_MINOR	"1"
 #define VER_REVISION	"13"
 #define VER_BUILD	"327"
+#define VER_XFF "2" /* -j (XFF patch) */
 
 #define STD_BUF  1024
 
@@ -281,7 +282,8 @@ typedef enum _OutputFlag
     OUTPUT_FLAG__NO_TIMESTAMP      = 0x00000400,      /* --nostamps */
     OUTPUT_FLAG__ALERT_PKT_CNT     = 0x00000800,      /* -A packet-count */
     /* XXX XXX pv.outputVidInAlerts */
-    OUTPUT_FLAG__ALERT_VLAN        = 0x00001000       /* config include_vlan_in_alerts */
+    OUTPUT_FLAG__ALERT_VLAN        = 0x00001000,       /* config include_vlan_in_alerts */
+    OUTPUT_FLAG__USE_XFF           = 0x00002000        /* -j (XFF patch) */
 
 } OutputFlag;
 
@@ -669,6 +671,11 @@ static INLINE int BcOutputDataLink(void)
 static INLINE int BcProcessNewRecordsOnly(void)
 {
     return barnyard2_conf->process_new_records_only_flag;
+}
+
+static INLINE int BcUseXFF(void)
+{
+    return barnyard2_conf->output_flags & OUTPUT_FLAG__USE_XFF;
 }
 
 static INLINE int BcVerboseByteDump(void)

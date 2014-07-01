@@ -157,11 +157,11 @@ static char **barnyard2_argv = NULL;
 /* command line options for getopt */
 #ifndef WIN32
 /* Unix does not support an argument to -s <wink marty!> OR -E, -W */
-static char *valid_options = "?a:Ac:C:d:Def:Fg:G:h:i:Il:m:noOqr:R:S:t:Tu:UvVw:xXy";
+static char *valid_options = "?a:Ac:C:d:Def:Fg:G:h:i:Il:m:noOjqr:R:S:t:Tu:UvVw:xXy";
 #else
 /* Win32 does not support:  -D, -g, -m, -t, -u */
 /* Win32 no longer supports an argument to -s, either! */
-static char *valid_options = "?a:Ac:C:d:eEf:FG:h:i:Il:noOqr:R:S:TUvVw:xXy";
+static char *valid_options = "?a:Ac:C:d:eEf:FG:h:i:Il:njoOqr:R:S:TUvVw:xXy";
 #endif
 
 static struct option long_options[] =
@@ -504,6 +504,7 @@ static int ShowUsage(char *program_name)
 //    FPUTS_BOTH ("        -X         Dump the raw packet data starting at the link layer\n");
 //    FPUTS_BOTH ("        -x         Dump application data as chars only\n");
     FPUTS_BOTH ("        -y         Include year in timestamp in the alert and log files\n");
+    FPUTS_BOTH ("        -j         Replace alert source ip by XFF original client ip (XFF patch)\n");
     FPUTS_BOTH ("        -?         Show this information\n");
     FPUTS_BOTH ("\n");
     FPUTS_BOTH ("Continual Processing Options:\n");
@@ -748,6 +749,10 @@ static void ParseCmdLine(int argc, char **argv)
 
             case 'I':  /* add interface name to alert string */
                 ConfigAlertWithInterfaceName(bc, NULL);
+                break;
+
+            case 'j':  /* use xff as source ip */
+                bc->output_flags |= OUTPUT_FLAG__USE_XFF;
                 break;
 
             case 'l':  /* use log dir <X> */

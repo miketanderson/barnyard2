@@ -1700,6 +1700,7 @@ int dbProcessEventInformation(DatabaseData *data,Packet *p,
 {
     char *SQLQueryPtr = NULL;
     int i = 0;    
+    u_long xff_srcip;
     
     if( (data == NULL) ||
 	(p == NULL) ||
@@ -2191,6 +2192,10 @@ int dbProcessEventInformation(DatabaseData *data,Packet *p,
 		{
 		    goto bad_query;
 		}
+
+    /* XFF patch - Change the IP packet src ip to the xff src ip */
+    if (BcUseXFF()) xff_srcip=ntohl(((Unified2IDSEvent *)event)->ip_source);
+    else xff_srcip=(u_long)ntohl(p->iph->ip_src.s_addr);
 		
 		if(data->detail)
 		{
@@ -2202,7 +2207,7 @@ int dbProcessEventInformation(DatabaseData *data,Packet *p,
 					"VALUES (%u,%u,%lu,%lu,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u);",
 					data->sid,
 					data->cid,
-					(u_long)ntohl(p->iph->ip_src.s_addr),
+          xff_srcip,
 					(u_long)ntohl(p->iph->ip_dst.s_addr),
 					IP_VER(p->iph),
 					IP_HLEN(p->iph),
@@ -2226,7 +2231,7 @@ int dbProcessEventInformation(DatabaseData *data,Packet *p,
 					"VALUES (%u,%u,%lu,%lu,%u);",
 					data->sid,
 					data->cid,
-					(u_long)ntohl(p->iph->ip_src.s_addr),
+          xff_srcip,
 					(u_long)ntohl(p->iph->ip_dst.s_addr),
 				       GET_IPH_PROTO(p))) != SNORT_SNPRINTF_SUCCESS)
 		    {

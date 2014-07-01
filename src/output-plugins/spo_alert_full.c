@@ -141,6 +141,7 @@ static void AlertFull(Packet *p, void *event, uint32_t event_type, void *arg)
 {
     SpoAlertFullData	*data;
 	SigNode				*sn;
+  struct in_addr xff_in_addr;
 
 	if( p == NULL || event == NULL || arg == NULL )
 	{
@@ -194,6 +195,17 @@ static void AlertFull(Packet *p, void *event, uint32_t event_type, void *arg)
     DEBUG_WRAP(DebugMessage(DEBUG_LOG, "Logging Alert data!\n"););
 
     LogTimeStamp(data->log, p);
+
+    if (BcUseXFF()){
+      xff_in_addr.s_addr=((Unified2IDSEvent *)event)->ip_source;  
+      if (xff_in_addr.s_addr!=GET_SRC_ADDR(p).s_addr){
+         TextLog_Puts(data->log, " [XFF: ");
+         xff_in_addr.s_addr=(long)((Unified2IDSEvent *)event)->ip_source;
+         TextLog_Puts(data->log, inet_ntoa(xff_in_addr));
+         TextLog_Puts(data->log, "] "); 
+      }
+    }
+
 
     if(p && IPH_IS_VALID(p))
     {
