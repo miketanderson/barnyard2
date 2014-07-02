@@ -842,7 +842,7 @@ void spoolerProcessRecord(Spooler *spooler, int fire_output)
             DEBUG_WRAP(DebugMessage(DEBUG_SPOOLER,"XFF: Extra Data Header found\n"););
 
             /* Get Extra Data Headers Event Type (has to be 4) */
-            uint32_t event_type = ntohl((Unified2ExtraDataHdr *)spooler->record.data)->event_type);
+            uint32_t event_type = ntohl(((Unified2ExtraDataHdr *)spooler->record.data)->event_type);
 
             if (event_type==4) 
             {
