@@ -881,7 +881,7 @@ void spoolerProcessRecord(Spooler *spooler, int fire_output)
                             Unified2IDSEvent * eventptr=((Unified2IDSEvent *)ernCache->data);
                             uint32_t i=ntohl(eventptr->ip_source);
                             DEBUG_WRAP(DebugMessage(DEBUG_SPOOLER,"SRC IP (cached): %i.%i.%i.%i\n",(i >> 24) & 0xFF,(i >> 16) & 0xFF,(i >> 8) & 0xFF,i * 0xFF););
-                            eventptr->ip_source=hton1(xff_ip);
+                            eventptr->ip_source=htonl(xff_ip);
                         }
                     }
                 }
