@@ -1701,6 +1701,7 @@ int dbProcessEventInformation(DatabaseData *data,Packet *p,
     char *SQLQueryPtr = NULL;
     int i = 0;    
     u_long xff_srcip;
+    u_long orig_ip;
     
     if( (data == NULL) ||
 	(p == NULL) ||
@@ -2194,8 +2195,17 @@ int dbProcessEventInformation(DatabaseData *data,Packet *p,
 		}
 
     /* XFF patch - Change the IP packet src ip to the xff src ip */
-    if (BcUseXFF()) xff_srcip=ntohl(((Unified2IDSEvent *)event)->ip_source);
-    else xff_srcip=(u_long)ntohl(p->iph->ip_src.s_addr);
+    if (BcUseXFF()) 
+    { 
+         xff_srcip=ntohl(((Unified2IDSEvent *)event)->ip_source);
+         //XFF TODO: LOG DEBUG message here
+         orig_ip = (u_long)ntohl(p->iph->ip_src.s_addr);
+	       DEBUG_WRAP(LogMessage("Using XFF source IP: %d original: %d\n", xff_srcip, orig_ip));
+    }
+    else 
+    {
+         xff_srcip=(u_long)ntohl(p->iph->ip_src.s_addr);
+    }
 		
 		if(data->detail)
 		{

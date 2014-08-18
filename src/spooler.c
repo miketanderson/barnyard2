@@ -735,17 +735,18 @@ void spoolerProcessRecord(Spooler *spooler, int fire_output)
         DecodePacket(datalink, spooler->record.pkt, &pkth, 
                      ((Unified2Packet *)spooler->record.data)->packet_data);
 
-	/* This is a fixup for portscan... */
-	if( (spooler->record.pkt->iph == NULL) && 
-	    ((spooler->record.pkt->inner_iph != NULL) && (spooler->record.pkt->inner_iph->ip_proto == 255)))
-	    {
-		spooler->record.pkt->iph = spooler->record.pkt->inner_iph;
-	    }
+	      /* This is a fixup for portscan... */
+	      if( (spooler->record.pkt->iph == NULL) && 
+	      ((spooler->record.pkt->inner_iph != NULL) && (spooler->record.pkt->inner_iph->ip_proto == 255)))
+	      {
+		        spooler->record.pkt->iph = spooler->record.pkt->inner_iph;
+	      }
 
         /* check if it's been re-assembled */
         if (spooler->record.pkt->packet_flags & PKT_REBUILT_STREAM)
         {
             DEBUG_WRAP(DebugMessage(DEBUG_SPOOLER,"Packet has been rebuilt from a stream\n"););
+            DEBUG_WRAP(LogMessage("Packet has been rebuilt from a stream\n"));
         }
 
         /* if the packet and cached event share the same id */
@@ -753,6 +754,7 @@ void spoolerProcessRecord(Spooler *spooler, int fire_output)
         {
             /* call output plugins with a "SPECIAL" alert format (both Event and Packet information) */
             DEBUG_WRAP(DebugMessage(DEBUG_SPOOLER,"Firing SPECIAL style (Packet+Event)\n"););
+            DEBUG_WRAP(LogMessage("Firing SPECIAL style (Packet+Event)\n"));
 
             if ( fire_output && 
                  ((ernCache->used == 0) || BcAlertOnEachPacketInStream()) )
@@ -773,6 +775,7 @@ void spoolerProcessRecord(Spooler *spooler, int fire_output)
 
                 /* call output plugins with an "ALERT" format (cached Event information only) */
                 DEBUG_WRAP(DebugMessage(DEBUG_SPOOLER,"Firing ALERT style (Event only)\n"););
+                DEBUG_WRAP(LogMessage("Firing ALERT style (Event only)\n"));
 
                 if (fire_output)
                     CallOutputPlugins(OUTPUT_TYPE__ALERT, 
@@ -786,6 +789,7 @@ void spoolerProcessRecord(Spooler *spooler, int fire_output)
 
             /* call output plugins with a "LOG" format (Packet information only) */
             DEBUG_WRAP(DebugMessage(DEBUG_SPOOLER,"Firing LOG style (Packet)\n"););
+            DEBUG_WRAP(LogMessage("Firing LOG style (Packet)\n"));
 
             if (fire_output)
                 CallOutputPlugins(OUTPUT_TYPE__SPECIAL,
@@ -812,6 +816,7 @@ void spoolerProcessRecord(Spooler *spooler, int fire_output)
         {
             /* call output plugins with an "ALERT" format (cached Event information only) */
             DEBUG_WRAP(DebugMessage(DEBUG_SPOOLER,"Firing ALERT style (Event only)\n"););
+            DEBUG_WRAP(LogMessage("Firing ALERT style (Event only)\n"));
 
             ernCache = spoolerEventCacheGetHead(spooler);
 
@@ -839,14 +844,21 @@ void spoolerProcessRecord(Spooler *spooler, int fire_output)
         /* use only if -j was specified as a command line param */
         if (BcUseXFF())
         {
+            Unified2IDSEvent * eventptrA=((Unified2IDSEvent *)ernCache->data);
+            uint32_t orig_ip=ntohl(eventptrA->ip_source);
+
+            //pkth.ts.tv_sec = ntohl(((Unified2Packet *)spooler->record.data)->packet_second);
+            //orig_ip = (u_long)ntohl(p->iph->ip_src.s_addr)
             DEBUG_WRAP(DebugMessage(DEBUG_SPOOLER,"XFF: Extra Data Header found\n"););
+            DEBUG_WRAP(LogMessage("XFF: Extra Data Header found with original ip %d\n",orig_ip));
 
             /* Get Extra Data Headers Event Type (has to be 4) */
             uint32_t event_type = ntohl(((Unified2ExtraDataHdr *)spooler->record.data)->event_type);
 
             if (event_type==4) 
             {
-                DEBUG_WRAP(DebugMessage(DEBUG_SPOOLER,"XFF: Data Header is type 4 (ok)\n"););
+                DEBUG_WRAP(LogMessage("XFF: Data Header is type 4 (ok)\n"));
+                //DEBUG_WRAP(DebugMessage(DEBUG_SPOOLER,"XFF: Data Header is type 4 (ok)\n"););
                 /* Get pointed to Extra Data Record */
                 Unified2ExtraData * extradataptr=((Unified2ExtraData *) (((unsigned char *)(spooler->record.data))+sizeof(Unified2ExtraDataHdr)));
 
@@ -857,31 +869,45 @@ void spoolerProcessRecord(Spooler *spooler, int fire_output)
                 uint32_t data_type=ntohl(extradataptr->data_type);
                 uint32_t blob_length=ntohl(extradataptr->blob_length);
 
-                DEBUG_WRAP(DebugMessage(DEBUG_SPOOLER,"Event ID %u %u %u (blob_length: %u\n",event_id, info_type, data_type, blob_length););
+                //DEBUG_WRAP(DebugMessage(DEBUG_SPOOLER,"Event ID %u %u %u (blob_length: %u\n",event_id, info_type, data_type, blob_length););
+                DEBUG_WRAP(LogMessage("Event ID %u %u %u (blob_length: %u\n",event_id, info_type, data_type, blob_length));
                 /* Process only if info_type and data_type are 1's (are there other cases?) */
                 /* Also checks if blob_length == 12 (data_type 4 + blob_length 4 + IP Address 4) */
                 if (info_type==1 && data_type==1 && blob_length==12)
                 {
-                    DEBUG_WRAP(DebugMessage(DEBUG_SPOOLER,"XFF: Extra Data is info and data type 1, data size is 12 (ok)\n"););
+                    //DEBUG_WRAP(DebugMessage(DEBUG_SPOOLER,"XFF: Extra Data is info and data type 1, data size is 12 (ok)\n"););
+                    DEBUG_WRAP(LogMessage("XFF: Extra Data is info and data type 1, data size is 12 (ok)\n"));
                     /* Get the XFF Ip address */
                     uint32_t xff_ip=ntohl(*(uint32_t *)(++extradataptr));
 
                     /* Transcriber note: not sure why the last 2 octets aren't formatted like the first two in this next line */
-                    DEBUG_WRAP(DebugMessage(DEBUG_SPOOLER,"XFF IP: %i.%i.%i.%i\n",(xff_ip >> 24) & 0xFF,(xff_ip >> 16) & 0xFF,(xff_ip >> 8) & 0xFF,xff_ip * 0xFF););
-
+                    DEBUG_WRAP(DebugMessage(DEBUG_SPOOLER,"XFF IP: %i.%i.%i.%i\n",(xff_ip >> 24) & 0xFF,(xff_ip >> 16) & 0xFF,(xff_ip >> 8) & 0xFF,xff_ip & 0xFF););
+                    DEBUG_WRAP(LogMessage("XFF IP (unformatted): %d\n",xff_ip));
+                    DEBUG_WRAP(LogMessage("XFF IP: %i.%i.%i.%i\n",(xff_ip >> 24) & 0xFF,(xff_ip >> 16) & 0xFF,(xff_ip >> 8) & 0xFF,xff_ip & 0xFF ));
+                    DEBUG_WRAP(LogMessage("Original IP: long: %d dotted: %i.%i.%i.%i\n",orig_ip, (orig_ip >> 24) & 0xFF,(orig_ip >> 16) & 0xFF,(orig_ip >> 8) & 0xFF,orig_ip & 0xFF ));
+                    //DEBUG_WRAP(LogMessage("Start spoolerEventCache"));
                     /* check if there is a previously cached event that matches this event id */
                     ernCache = spoolerEventCacheGetByEventID(spooler, event_id);
 
+                    //DEBUG_WRAP(LogMessage("Done spoolerEventCache"));
+
                     if (ernCache != NULL)
                     {
+                        
+                        //DEBUG_WRAP(LogMessage("ernCache != NULL"));
                         /* Process it ONLY if the cached entry is type 7 - IDS EVENT */
                         if (ernCache->type==UNIFIED2_IDS_EVENT)
                         {
+                            //DEBUG_WRAP(LogMessage("ernCache-type==UNIFIED2_IDS_EVENT"));
                             DEBUG_WRAP(DebugMessage(DEBUG_SPOOLER,"XFF: Found a cached IDS_EVENT with the same ID\n"););
+                            //DEBUG_WRAP(LogMessage("XFF: Found a cached IDS_EVENT with the same ID\n"));
                             Unified2IDSEvent * eventptr=((Unified2IDSEvent *)ernCache->data);
                             uint32_t i=ntohl(eventptr->ip_source);
-                            DEBUG_WRAP(DebugMessage(DEBUG_SPOOLER,"SRC IP (cached): %i.%i.%i.%i\n",(i >> 24) & 0xFF,(i >> 16) & 0xFF,(i >> 8) & 0xFF,i * 0xFF););
+                            DEBUG_WRAP(LogMessage("SRC IP (cached): %i.%i.%i.%i\n",(i >> 24) & 0xFF,(i >> 16) & 0xFF,(i >> 8) & 0xFF,i & 0xFF));
+                            DEBUG_WRAP(DebugMessage(DEBUG_SPOOLER,"SRC IP (cached): %i.%i.%i.%i\n",(i >> 24) & 0xFF,(i >> 16) & 0xFF,(i >> 8) & 0xFF,i & 0xFF););
                             eventptr->ip_source=htonl(xff_ip);
+                            uint32_t debug_ip=ntohl(eventptr->ip_source);
+                            DEBUG_WRAP(LogMessage("New IP: %i.%i.%i.%i\n",(debug_ip >> 24) & 0xFF,(debug_ip >> 16) & 0xFF,(debug_ip >> 8) & 0xFF,debug_ip & 0xFF));
                         }
                     }
                 }
